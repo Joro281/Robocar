@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Streaming and Sensor Control</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+
+        .main-container {
+            display: flex;
+            width: 100%;
+            max-width: 1200px;
+            height: 100%;
+        }
+
+        /* Left Section: Live Stream */
+        .left-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: #ffffff;
+            border-right: 2px solid #ddd;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        .video-feed {
+            width: 100%;
+            height: auto;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+        }
+
+      /* Right Section: Sensor Data and Controls */
+        .right-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            box-sizing: border-box;
+            position: relative; /* Necessary for absolute positioning inside */
+            padding-left: 10px;
+        }
+
+        /* Sensor Data */
+        .sensors {
+            width: 100%;
+            max-width:400px;
+            height: 45;
+            text-align: center;
+            background-color: #fff;
+            padding: 5px;
+            padding-bottom: 15px; 
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 200px; /* Increased margin to create space between sensors and controls */
+            z-index: 1;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            font-size: 11px; 
+            line-height: 1.5; 
+        }
+        sensors p {
+            font-size: 11px; 
+            
+        }
+
+        .sensors h3 {
+            font-size: 15px;
+            padding-top: 5px; 
+            padding-bottom: 1px; 
+            padding-left: 15px; 
+            padding-right: 15px; 
+            margin-bottom: 5px;
+            margin-top: 5px;
+        }
+
+        /* Control Buttons */
+        .controls {
+            position: absolute;
+            top: 55%; /* Center vertically */
+            left: 50%; /* Center horizontally in the right section */
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 50px;
+            gap: 10px;
+        }
+
+
+
+        .horizontal-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .button {
+            padding: 10px 15px;
+            font-size: 18px;
+            cursor: pointer;
+            text-align: center;
+            color: #fff;
+            background-color: #04AA6D;
+            border: none;
+            border-radius: 5px;
+            box-shadow: 0 5px #999;
+            width: 50px;
+            height: 50px;
+        }
+
+        .button:hover {
+            background-color: #3e8e41;
+        }
+
+        .button:active {
+            background-color: #3e8e41;
+            box-shadow: 0 3px #666;
+            transform: translateY(2px);
+        }
+
+        .stop-btn {
+            background-color: #e74c3c;
+        }
+
+        .stop-btn:hover {
+            background-color: #c0392b;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <!-- Left Section: Live Streaming -->
+        <div class="left-section">
+            <h3>Live Streaming</h3>
+            <img src="{{ url_for('video_feed') }}" class="video-feed" alt="Live Stream">
+        </div>
+
+        <!-- Right Section: Sensor Data and Controls -->
+        <div class="right-section">
+            <!-- Sensor Data -->
+            <div class="sensors">
+                <h3>Sensor Data</h3>
+                <div class="sensor">
+                    <span>MQ2 Status:</span>
+                    <span id="mq2-status" style="font-weight: bold;">Loading...</span>
+                </div>
+                <div class="sensor">
+                    <span>MQ3 Status:</span>
+                    <span id="mq3-status" style="font-weight: bold;">Loading...</span>
+                </div>
+                <div class="sensor">
+                    <span>MQ6 Status:</span>
+                    <span id="mq6-status" style="font-weight: bold;">Loading...</span>
+                </div>
+            </div>
+
+            <!-- Control Buttons -->
+            <div class="controls">
+                <button class="button" onclick="location.href='http://{{HTML_address}}:8080/Forward'">↑</button>
+                <div class="horizontal-buttons">
+                    <button class="button" onclick="location.href='http://{{HTML_address}}:8080/left'">←</button>
+                    <button class="button stop-btn" onclick="location.href='http://{{HTML_address}}:8080/stop'">⊘</button>
+                    <button class="button" onclick="location.href='http://{{HTML_address}}:8080/right'">→</button>
+                </div>
+                <button class="button" onclick="location.href='http://{{HTML_address}}:8080/Backward'">↓</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        async function fetchSensorData() {
+            try {
+                const response = await fetch('/api/sensor_data');
+                if (!response.ok) {
+                    console.error('Network response was not ok:', response.statusText);
+                    return;
+                }
+                const data = await response.json();
+
+                console.log('Received sensor data:', data);  // Log the raw data
+
+                // Check if data is correct
+                if (data["mq2-status"] === undefined || data["mq3-status"] === undefined || data["mq6-status"] === undefined) {
+                    console.error("Received data is malformed:", data);
+                    return;
+                }
+
+                // Update MQ2, MQ3, and MQ6 statuses
+                document.getElementById("mq2-status").innerText = data["mq2-status"] ? "Smoke Detected" : "Safe Area";
+                document.getElementById("mq3-status").innerText = data["mq3-status"] ? "Alcohol Detected" : "Safe Area";
+                document.getElementById("mq6-status").innerText = data["mq6-status"] ? "Flammable Area" : "Safe Area";
+
+                // Styling the statuses dynamically
+                document.getElementById("mq2-status").style.color = data["mq2-status"] ? "red" : "green";
+                document.getElementById("mq3-status").style.color = data["mq3-status"] ? "red" : "green";
+                document.getElementById("mq6-status").style.color = data["mq6-status"] ? "red" : "green";
+
+            } catch (error) {
+                console.error('Error fetching sensor data:', error);
+            }
+        }
+
+        // Update sensors every 2 seconds
+        setInterval(fetchSensorData, 2000);
+
+    </script>
+</body>
+</html>
